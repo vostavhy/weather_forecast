@@ -22,4 +22,3 @@ def get_weather_info(city, token):
     response_forecast.raise_for_status()
 
     return response_current.json(), response_forecast.json()
-
