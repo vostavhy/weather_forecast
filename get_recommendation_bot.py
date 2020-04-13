@@ -1,7 +1,7 @@
 import os
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from dotenv import load_dotenv
-from weather_api import get_weather_info
+from weather_api import get_weather_info, get_recommendation
 import logging
 
 load_dotenv()
@@ -19,14 +19,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 
-def get_recommendation(weather_info):
-    """
-    :param weather_info: information about current weather
-    :return: recommendation what you need to wear you want to go outside
-    """
-    pass
-
-
 def start(update, context):
     """Send a message when the command /start is issued."""
     context.bot.send_message(chat_id=update.effective_chat.id, text=TEXT + '')
@@ -39,16 +31,30 @@ def help(update, context):
 
 def info(update, context):
     """Send a message with info about the weather when city is typed"""
-    city = context.args[0]
+    city = update.message.text
+    my_message = ''
 
-    # get weather info from weather api
-    weather_info = get_weather_info(city=city, OPEN_WEATHER_TOKEN)
+    try:
+        # get weather info from weather api
+        weather_info = get_weather_info(city=city, token=OPEN_WEATHER_TOKEN)
+        main_info = weather_info.get("main")
+        my_message += f'Погода в городе {city}: \n' \
+                      f'температура - {main_info.get("temp")} °C \n' \
+                      f'чувствуется как - {main_info.get("feels_like")} °C \n' \
+                      f'давление - {main_info.get("pressure")} Па \n' \
+                      f'влажность - {main_info.get("humidity")}% \n' \
+                      f'скорость ветра - {weather_info.get("wind").get("speed")} м/с \n' \
+                      f'описание - {weather_info.get("weather")[0].get("description")} \n' \
+
+
+    except Exception as e:
+        logger.warning(f'Бот упал с ошибкой: {e}')
+        my_message += f'К сожалению, у меня нет информации для города {city}. Проверьте правильность названия города.'
 
     # get weather recommendations
-    recommendation = get_recommendation(weather_info=weather_info)
+    # recommendation = get_recommendation(weather_info=weather_info)
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f'Погода в городе {city}: \n {weather_info}'
-                                                                    f'Рекомендации по одежде: {recommendation}')
+    context.bot.send_message(chat_id=update.effective_chat.id, text=my_message)
 
 
 def unknown(update, context):
@@ -70,7 +76,7 @@ def main():
     help_handler = CommandHandler('help', help)
 
     # on text message bot should return info about the weather
-    echo_handler = MessageHandler(Filters.text, info)
+    info_handler = MessageHandler(Filters.text, info)
 
     # in case of unknown command
     unknown_handler = MessageHandler(Filters.command, unknown)
@@ -79,7 +85,7 @@ def main():
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(help_handler)
     dispatcher.add_handler(unknown_handler)
-    dispatcher.add_handler(echo_handler)
+    dispatcher.add_handler(info_handler)
     dispatcher.add_error_handler(error)
 
     # log all errors
