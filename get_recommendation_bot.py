@@ -48,9 +48,9 @@ def get_recommendation(temp, is_rain):
         status = 'очень холодно'
 
     recommendation = f'Рекоммендация по одежде:\n' \
-                     f'Так как на улице {status}, {temp_status.get(status)}.'
+                     f'В ближайшие сутки будет {status}, {temp_status.get(status)}.'
     if is_rain:
-        recommendation += 'Также на улице идет дождь, захвати с собой зонт.'
+        recommendation += 'Также может пойти дождь, рекомендую захватить зонт.'
 
     return recommendation
 
@@ -72,19 +72,26 @@ def info(update, context):
 
     try:
         # get weather info from weather api
-        weather_info = get_weather_info(city=city, token=OPEN_WEATHER_TOKEN)
-        main_info = weather_info.get("main")
-        description = weather_info.get("weather")[0].get("description")
+        current_weather_info, forecast_weather_info = get_weather_info(city=city, token=OPEN_WEATHER_TOKEN)
+
+        # current weather
+        main_info_current = current_weather_info.get('main')
+        description_current = current_weather_info.get('weather')[0].get('description')
 
         my_message += f'Погода в городе {city}: \n' \
-                      f'{description} \n' \
-                      f'температура: {main_info.get("temp")} °C \n' \
-                      f'чувствуется как: {main_info.get("feels_like")} °C \n' \
-                      f'давление: {main_info.get("pressure")} Па \n' \
-                      f'влажность: {main_info.get("humidity")} % \n' \
-                      f'скорость ветра: {weather_info.get("wind").get("speed")} м/с \n\n' \
+                      f'{description_current} \n' \
+                      f'температура: {main_info_current.get("temp")} °C \n' \
+                      f'чувствуется как: {main_info_current.get("feels_like")} °C \n' \
+                      f'давление: {main_info_current.get("pressure")} Па \n' \
+                      f'влажность: {main_info_current.get("humidity")} % \n' \
+                      f'скорость ветра: {current_weather_info.get("wind").get("speed")} м/с \n\n' \
 
-        recommendation = get_recommendation(main_info.get('feels_like'), description == 'дождь')
+        # daily forecast
+        daily_forecast = forecast_weather_info.get('list')[0]
+        main_info_forecast = daily_forecast.get('main')
+        description_forecast = daily_forecast.get('weather')[0].get('description')
+
+        recommendation = get_recommendation(main_info_forecast.get('feels_like'), description_forecast == 'дождь')
 
         my_message += recommendation
 
